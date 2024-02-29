@@ -130,7 +130,7 @@ AnimeRouter.get("/home", async (c) => {
       const htmlContent = $(el).html();
       if (htmlContent) {
         const api = load(htmlContent);
-        res.latestEpisodeAnimes = extractAnimes(api, latestEpisodeSelector);
+        res.latestEpisodeAnimes = extractAnimes($, latestEpisodeSelector);
       }
     });
   return c.json({ success: true, res });
