@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 
+import AnimeRouter from "./routes/AnimeRouter";
+
 const app = new Hono();
 
-app.get("/hi", async (c: any, next: any) => {
-  c.text("hi");
-});
+app.route('/anime', AnimeRouter)
 
 export default app;
