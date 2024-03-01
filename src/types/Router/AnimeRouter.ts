@@ -1,3 +1,4 @@
+import { AnimeGeneralAboutInfo, MostPopularAnime, RecommendedAnime, RelatedAnime, Season } from "../method";
 
 export interface Episode {
   sub?: number | null;
@@ -49,4 +50,15 @@ export interface Res {
   topAiringAnimes: any[];
   genres: any[];
   top10Animes: top10Animes;
+}
+
+export interface ScrapedAnimeAboutInfo {
+  anime: {
+    info: AnimeGeneralAboutInfo;
+    moreInfo: Record<string, string | string[]>;
+  };
+  seasons: Season[];
+  mostPopularAnimes: MostPopularAnime[];
+  relatedAnimes: RelatedAnime[];
+  recommendedAnimes: RecommendedAnime[];
 }
