@@ -7,10 +7,7 @@ import {
   Top10AnimeTimePeriod,
 } from "../types/method";
 
-export const extractAnimes = (
-  $: CheerioAPI,
-  selector: SelectorType
-): Anime[] => {
+export const extractAnimes = ($: CheerioAPI,selector: SelectorType): Anime[] => {
   const animes: Array<Anime> = [];
 
   $(selector).each((i, el) => {

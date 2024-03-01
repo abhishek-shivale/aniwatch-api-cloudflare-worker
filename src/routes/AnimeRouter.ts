@@ -1,12 +1,18 @@
 import { Hono } from "hono";
 import { CheerioAPI, SelectorType, load } from "cheerio";
-import { Res, ScrapedAnimeAboutInfo, anime } from "../types/Router/AnimeRouter";
-import { SRC_HOME_URL } from "../utils/constants";
+import {
+  Res,
+  ScrapedAnimeAboutInfo,
+  ScrapedAnimeCategory,
+  anime,
+} from "../types/Router/AnimeRouter";
+import { SRC_BASE_URL, SRC_HOME_URL } from "../utils/constants";
 import {
   extractAnimes,
   extractMostPopularAnimes,
   extractTop10Animes,
 } from "../utils/methods";
+import { AnimeCategories } from "../types/method";
 
 const AnimeRouter = new Hono();
 //Home
@@ -197,7 +203,7 @@ AnimeRouter.get("/home", async (c) => {
     }
   });
 
-  return c.json({ success: true, res });
+  return c.json(res);
 });
 
 //animeinfo
@@ -356,7 +362,97 @@ AnimeRouter.get("/info", async (c) => {
   });
 });
 
+// /anime/:category?page=${pageNo}
 
+AnimeRouter.get("/:category", async (c, ) => {
+  const page: any = c.req.query("page");
+  const category = c.req.param('category')
 
+  const res: ScrapedAnimeCategory = {
+    animes: [],
+    genres: [],
+    top10Animes: {
+      today: [],
+      week: [],
+      month: [],
+    },
+    category,
+    currentPage: Number(page),
+    hasNextPage: false,
+    totalPages: 1,
+  };
+
+  const scrapeUrl: URL = new URL(category, SRC_BASE_URL);
+  const mainPage = await fetch(`${scrapeUrl}?page=${page}`);
+  const mainPageText = await mainPage.text();
+  const $: CheerioAPI = load(mainPageText);
+
+  const selector: SelectorType =
+    "#main-content .tab-content .film_list-wrap .flw-item";
+
+  const categoryNameSelector: SelectorType =
+    "#main-content .block_area .block_area-header .cat-heading";
+  res.category = $(categoryNameSelector)?.text()?.trim() ?? category;
+
+  res.hasNextPage =
+    $(".pagination > li").length > 0
+      ? $(".pagination li.active").length > 0
+        ? $(".pagination > li").last().hasClass("active")
+          ? false
+          : true
+        : false
+      : false;
+
+  res.totalPages =
+    Number(
+      $('.pagination > .page-item a[title="Last"]')
+        ?.attr("href")
+        ?.split("=")
+        .pop() ??
+        $('.pagination > .page-item a[title="Next"]')
+          ?.attr("href")
+          ?.split("=")
+          .pop() ??
+        $(".pagination > .page-item.active a")?.text()?.trim()
+    ) || 1;
+
+  res.animes = extractAnimes($, selector);
+
+  if (res.animes.length === 0 && !res.hasNextPage) {
+    res.totalPages = 0;
+  }
+
+  const genreSelector: SelectorType =
+    "#main-sidebar .block_area.block_area_sidebar.block_area-genres .sb-genre-list li";
+  $(genreSelector).each((i, el) => {
+    res.genres.push(`${$(el).text().trim()}`);
+  });
+
+  const top10AnimeSelector: SelectorType =
+    '#main-sidebar .block_area-realtime [id^="top-viewed-"]';
+
+  $(top10AnimeSelector).each((i, el) => {
+    const period = $(el).attr("id")?.split("-")?.pop()?.trim();
+
+    if (period === "day") {
+      res.top10Animes.today = extractTop10Animes($, period);
+      return;
+    }
+    if (period === "week") {
+      res.top10Animes.week = extractTop10Animes($, period);
+      return;
+    }
+    if (period === "month") {
+      res.top10Animes.month = extractTop10Animes($, period);
+    }
+  });
+
+  return c.json(res);
+});
+
+// /anime/episodes/${anime-id}
+AnimeRouter.get('/epiodes/:anime-id',async(c)=>{
+  
+})
 
 export default AnimeRouter;

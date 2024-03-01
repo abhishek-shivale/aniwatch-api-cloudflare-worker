@@ -1,4 +1,4 @@
-import { AnimeGeneralAboutInfo, MostPopularAnime, RecommendedAnime, RelatedAnime, Season } from "../method";
+import {  AnimeGeneralAboutInfo, MostPopularAnime, RecommendedAnime, RelatedAnime, Season } from "../method";
 
 export interface Episode {
   sub?: number | null;
@@ -61,4 +61,20 @@ export interface ScrapedAnimeAboutInfo {
   mostPopularAnimes: MostPopularAnime[];
   relatedAnimes: RelatedAnime[];
   recommendedAnimes: RecommendedAnime[];
+}
+
+
+
+export interface ScrapedAnimeCategory {
+  animes: any;
+    genres: any[],
+  top10Animes: {
+  today: any[],
+  week:any [],
+  month: any[],
+  },
+  category: string;
+  totalPages: number;
+  currentPage: number;
+  hasNextPage: boolean;
 }
