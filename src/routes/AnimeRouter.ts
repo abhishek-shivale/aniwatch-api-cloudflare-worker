@@ -4,15 +4,29 @@ import {
   Res,
   ScrapedAnimeAboutInfo,
   ScrapedAnimeCategory,
+  ScrapedAnimeEpisodes,
   anime,
 } from "../types/Router/AnimeRouter";
-import { SRC_BASE_URL, SRC_HOME_URL } from "../utils/constants";
+import {
+  ACCEPT_ENCODING_HEADER,
+  ACCEPT_HEADER,
+  SRC_AJAX_URL,
+  SRC_BASE_URL,
+  SRC_HOME_URL,
+  USER_AGENT_HEADER,
+} from "../utils/constants";
 import {
   extractAnimes,
   extractMostPopularAnimes,
   extractTop10Animes,
+  retrieveServerId,
 } from "../utils/methods";
-import { AnimeCategories } from "../types/method";
+import { AnimeCategories, Servers } from "../types/method";
+import MegaCloud from "../extractors/megacloud";
+import StreamSB from "../extractors/streamsb";
+import StreamTape from "../extractors/streamtape";
+import RapidCloud from "../extractors/rapidcloud";
+import { Context } from "hono/jsx";
 
 const AnimeRouter = new Hono();
 //Home
@@ -364,9 +378,9 @@ AnimeRouter.get("/info", async (c) => {
 
 // /anime/:category?page=${pageNo}
 
-AnimeRouter.get("/:category", async (c, ) => {
+AnimeRouter.get("/:category", async (c) => {
   const page: any = c.req.query("page");
-  const category = c.req.param('category')
+  const category = c.req.param("category");
 
   const res: ScrapedAnimeCategory = {
     animes: [],
@@ -451,8 +465,122 @@ AnimeRouter.get("/:category", async (c, ) => {
 });
 
 // /anime/episodes/${anime-id}
-AnimeRouter.get('/epiodes/:anime-id',async(c)=>{
-  
-})
+AnimeRouter.get("/episodes/:anime-id", async (c) => {
+  const res: ScrapedAnimeEpisodes = {
+    totalEpisodes: 0,
+    episodes: [],
+  };
+  const animeId: any = c.req.param("anime-id");
+
+  const mainPage = await fetch(
+    `${SRC_AJAX_URL}/v2/episode/list/${animeId.split("-").pop()}`
+  );
+
+  const data: any = await mainPage.json();
+  const $: CheerioAPI = load(data.html);
+
+  const episodes = $.html(".detail-infor-content .ss-list a");
+  res.totalEpisodes = episodes.length;
+
+  $(".detail-infor-content .ss-list a").each((i, el) => {
+    res.episodes.push({
+      title:
+        $(el)?.attr("title")?.trim().replace("/", "").replace("  ", " ") ||
+        null,
+      episodeId: $(el)?.attr("href")?.split("/")?.pop() || null,
+      number: Number($(el).attr("data-number")),
+      isFiller: $(el).hasClass("ssl-item-filler"),
+    });
+  });
+  return c.json(res);
+});
+
+// /anime/episode-srcs?id=${episodeId}?server=${server}&category=${category (dub or sub)}
+AnimeRouter.get("/info/episode-srcs", async (c: any) => {
+  const episodeId: string | undefined = c.req.query("id");
+  const server = c.req.query("server") || Servers.VidStreaming;
+  const category: any = c.req.query("category");
+
+  if (episodeId?.startsWith("http")) {
+    const serverUrl = new URL(episodeId);
+    switch (server) {
+      case Servers.VidStreaming:
+      case Servers.VidCloud:
+        return new MegaCloud().extract(serverUrl);
+      case Servers.StreamSB:
+        return new StreamSB().extract(serverUrl, true);
+      case Servers.StreamTape:
+        return new StreamTape().extract(serverUrl);
+      default: // vidcloud
+        return new RapidCloud().extract(serverUrl);
+    }
+  }
+
+  const epId = new URL(`/watch/${episodeId}`, SRC_BASE_URL).href;
+
+  const resp = await fetch(
+    `${SRC_AJAX_URL}/v2/episode/servers?episodeId=${epId.split("?ep=")[1]}`
+  );
+
+  const data: any = await resp.json();
+  const $: CheerioAPI = load(data?.html);
+
+  let serverId: string | null = null;
+
+  switch (server) {
+    case Servers.VidCloud: {
+      serverId = retrieveServerId($, 1, category);
+      if (!serverId) {
+        // Handle server not found scenario here (e.g., console.error, log error)
+        console.error(`Server ${server} not found`);
+        return undefined; // Indicate error without throwing an exception
+      }
+      break;
+    }
+    case Servers.VidStreaming: {
+      serverId = retrieveServerId($, 4, category);
+      console.log(serverId);
+      
+      // if (!serverId) {
+      //   // Handle server not found scenario here (e.g., console.error, log error)
+      //   console.error(`Server ${server} not found`);
+      //   return undefined; // Indicate error without throwing an exception
+      // }
+      break;
+    }
+    case Servers.StreamSB: {
+      serverId = retrieveServerId($, 5, category);
+      // if (!serverId) {
+      //   // Handle server not found scenario here (e.g., console.error, log error)
+      //   console.error(`Server ${server} not found`);
+      //   return undefined; // Indicate error without throwing an exception
+      // }
+      break;
+    }
+    case Servers.StreamTape: {
+      serverId = retrieveServerId($, 3, category);
+      // if (!serverId) {
+      //   // Handle server not found scenario here (e.g., console.error, log error)
+      //   console.error(`Server ${server} not found`);
+      //   return undefined; // Indicate error without throwing an exception
+      // }
+      break;
+    }
+  }
+
+  const sourceResp = await fetch(
+    `${SRC_AJAX_URL}/v2/episode/sources?id=${serverId}`
+  );
+
+  // if (!sourceResp.ok) {
+  //   // Handle server response errors here (e.g., console.error, log error)
+  //   console.error(`Error fetching source data: ${sourceResp.status}`);
+  //   return undefined; // Indicate error without throwing an exception
+  // }
+
+  const sourceData: any = await sourceResp.json();
+  const link = sourceData;
+  return c.json({ link: link, server: server });
+});
 
 export default AnimeRouter;
