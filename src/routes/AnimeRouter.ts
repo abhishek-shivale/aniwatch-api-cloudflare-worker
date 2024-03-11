@@ -511,7 +511,7 @@ AnimeRouter.get("/info/episode-srcs", async (c: any) => {
         return new StreamSB().extract(serverUrl, true);
       case Servers.StreamTape:
         return new StreamTape().extract(serverUrl);
-      default: // vidcloud
+      default: 
         return new RapidCloud().extract(serverUrl);
     }
   }
@@ -531,9 +531,8 @@ AnimeRouter.get("/info/episode-srcs", async (c: any) => {
     case Servers.VidCloud: {
       serverId = retrieveServerId($, 1, category);
       if (!serverId) {
-        // Handle server not found scenario here (e.g., console.error, log error)
         console.error(`Server ${server} not found`);
-        return undefined; // Indicate error without throwing an exception
+        return undefined
       }
       break;
     }
@@ -541,29 +540,26 @@ AnimeRouter.get("/info/episode-srcs", async (c: any) => {
       serverId = retrieveServerId($, 4, category);
       console.log(serverId);
       
-      // if (!serverId) {
-      //   // Handle server not found scenario here (e.g., console.error, log error)
-      //   console.error(`Server ${server} not found`);
-      //   return undefined; // Indicate error without throwing an exception
-      // }
+      if (!serverId) {
+        console.error(`Server ${server} not found`);
+        return undefined; 
+      }
       break;
     }
     case Servers.StreamSB: {
       serverId = retrieveServerId($, 5, category);
-      // if (!serverId) {
-      //   // Handle server not found scenario here (e.g., console.error, log error)
-      //   console.error(`Server ${server} not found`);
-      //   return undefined; // Indicate error without throwing an exception
-      // }
+      if (!serverId) {
+        console.error(`Server ${server} not found`);
+        return undefined; 
+      }
       break;
     }
     case Servers.StreamTape: {
       serverId = retrieveServerId($, 3, category);
-      // if (!serverId) {
-      //   // Handle server not found scenario here (e.g., console.error, log error)
-      //   console.error(`Server ${server} not found`);
-      //   return undefined; // Indicate error without throwing an exception
-      // }
+      if (!serverId) {
+        console.error(`Server ${server} not found`);
+        return undefined; 
+      }
       break;
     }
   }
